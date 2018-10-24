@@ -58,7 +58,7 @@ public class Main {
             return;
         }
 
-        boolean gui = args.length < 5 || Boolean.parseBoolean(args[5]);
+        boolean gui = args.length < 5 || Boolean.parseBoolean(args[4]);
 
         JFrame preview = new JFrame();
         PreviewPane pane = new PreviewPane();
