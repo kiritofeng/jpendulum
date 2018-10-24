@@ -42,28 +42,38 @@ public class Main {
     }
 
     public static boolean close(Pair<Double> P1, Pair<Double> P2, Pair<Double> P3) {
-        if(Math.abs(P1.first - P2.first) < 5) return true;
-        if(Math.abs(P1.second - P2.second) < 5) return true;
-        if(Math.abs(P1.first - P3.first) < 5) return true;
-        if(Math.abs(P1.second - P3.second) < 5) return true;
-        if(Math.abs(P2.first - P3.first) < 5) return true;
-        if(Math.abs(P2.second - P3.second) < 5) return true;
+        int tol = 20;
+        if(Math.abs(P1.first - P2.first) < tol) return true;
+        if(Math.abs(P1.second - P2.second) < tol) return true;
+        if(Math.abs(P1.first - P3.first) < tol) return true;
+        if(Math.abs(P1.second - P3.second) < tol) return true;
+        if(Math.abs(P2.first - P3.first) < tol) return true;
+        if(Math.abs(P2.second - P3.second) < tol) return true;
         return false;
     }
 
     public static void main(String[] args) {
-        args = new String[]{"/home/kirito/Videos/fml.mp4", "idk.csv", "ff0000", "10"};
         if(args.length < 4) {
-            System.err.println("Usage: jpendulum <video> <output file> <colour> <tolerance>");
+            System.err.println("Usage: jpendulum <video> <output file> <colour> <tolerance> <enable gui?>");
             return;
         }
+
+        boolean gui = args.length < 5 || Boolean.parseBoolean(args[5]);
 
         JFrame preview = new JFrame();
         PreviewPane pane = new PreviewPane();
         preview.add(pane);
         preview.setSize(400, 300);
+        preview.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         preview.pack();
-        preview.setVisible(true);
+        if(gui) {
+            preview.setVisible(true);
+        } else {
+            preview.dispose();
+        }
+
+        // close stderr before the user gets spammed...
+        System.err.close();
 
         try {
             // input video
@@ -89,6 +99,9 @@ public class Main {
             Java2DFrameConverter converter = new Java2DFrameConverter();
 
             Frame tmpFrame;
+
+            int width = 1, height = 1;
+
             while(true) {
                 try {
                     tmpFrame = grabber.grab();
@@ -97,9 +110,13 @@ public class Main {
                     return;
                 }
 
-                if(tmpFrame==null) break;
+                if(tmpFrame == null) break;
                 BufferedImage frame = converter.convert(tmpFrame);
+                if(frame == null) continue;
                 pane.setPic(frame);
+
+                width = frame.getWidth();
+                height = frame.getHeight();
 
                 // scan the whole frame for any occurrences of C, within tolerance range
                 ArrayList<Pair> A = new ArrayList<Pair>();
@@ -108,12 +125,10 @@ public class Main {
                         Color c = new Color(frame.getRGB(i, j));
                         if(similar(C, c, tolerance)) {
                             A.add(new Pair<Integer>(i, j));
-                            //pane.addPoint(new Pair<Integer>(i*preview.getWidth()/frame.getWidth(), j*preview.getHeight()/frame.getHeight()));
+                            pane.addPoint(new Pair<Integer>(i*preview.getWidth()/frame.getWidth(), j*preview.getHeight()/frame.getHeight()));
                         }
                     }
                 }
-
-
 
                 // get the center of mass
                 Pair<Double> com = new Pair<Double>(0.0, 0.0);
@@ -127,19 +142,21 @@ public class Main {
                 // add to ArrayList
                 loc.add(com);
 
-                pane.addPoint(new Pair<Integer>((int)(com.first * preview.getWidth()/1920), (int)(com.second * preview.getHeight() / 1080)));
+                pane.addPoint(new Pair<Integer>((int)(com.first * preview.getWidth()/width), (int)(com.second * preview.getHeight() / height)));
 
                 pane.displayPoints();
 
-                Thread.sleep(1000);
+                Thread.sleep(50);
 
                 pane.clearPoints();
             }
 
 
-            //for(Pair<Double> P: loc) {
+            for(Pair<Double> P: loc) {
                 //System.out.printf("%.2f\t%.2f\n",P.first,P.second);
-            //}
+            }
+
+            System.out.println(loc.size());
 
             // approximate the center
             ArrayList<Pair> centers = new ArrayList<Pair>();
@@ -157,12 +174,15 @@ public class Main {
             for(Pair<Double> P: centers) {
                 center.first += P.first;
                 center.second += P.second;
-                pane.addPoint(new Pair<Integer>((int)(P.first * preview.getWidth()/1920), (int)(P.second * preview.getHeight() / 1080)));
+                System.out.printf("%.2f\t%.2f\n",P.first,P.second);
+                //pane.addPoint(new Pair<Integer>((int)(P.first * preview.getWidth()/width), (int)(P.second * preview.getHeight() / height)));
             }
             center.first /= centers.size();
             center.second /= centers.size();
 
-            pane.addPoint(new Pair<Integer>((int)(center.first * preview.getWidth()/1920), (int)(center.second * preview.getHeight() / 1080)));
+            //System.out.printf("(%f, %f)\n",center.first,center.second);
+
+            pane.addPoint(new Pair<Integer>((int)(center.first * preview.getWidth()/width), (int)(center.second * preview.getHeight() / height)));
 
             pane.displayPoints();
 
@@ -175,6 +195,7 @@ public class Main {
 
             //System.out.println(center.first + "\t" + center.second);
             pw.close();
+            System.out.println("Tracking Complete!");
         } catch(Exception ex) {
             ex.printStackTrace();
         }
