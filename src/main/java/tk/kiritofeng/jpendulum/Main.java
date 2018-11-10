@@ -42,7 +42,7 @@ public class Main {
     }
 
     public static boolean close(Pair<Double> P1, Pair<Double> P2, Pair<Double> P3) {
-        int tol = 20;
+        int tol = 10;
         if(Math.abs(P1.first - P2.first) < tol) return true;
         if(Math.abs(P1.second - P2.second) < tol) return true;
         if(Math.abs(P1.first - P3.first) < tol) return true;
@@ -83,7 +83,10 @@ public class Main {
             PrintWriter pw = new PrintWriter(output);
 
             // parse the colour's hex code
-            Color C = new Color(Integer.parseInt(args[2], 16));
+            String[] hexcodes = args[2].split(",");
+            Color[] C = new Color[hexcodes.length];
+            for(int i=0;i<hexcodes.length;++i)
+                C[i] = new Color(Integer.parseInt(hexcodes[i], 16));
             // get the tolerance
             int tolerance = Integer.parseInt(args[3]);
 
@@ -123,9 +126,11 @@ public class Main {
                 for(int i = 0; i < frame.getWidth(); ++i) {
                     for(int j = 0; j < frame.getHeight(); ++j) {
                         Color c = new Color(frame.getRGB(i, j));
-                        if(similar(C, c, tolerance)) {
-                            A.add(new Pair<Integer>(i, j));
-                            pane.addPoint(new Pair<Integer>(i*preview.getWidth()/frame.getWidth(), j*preview.getHeight()/frame.getHeight()));
+                        for(Color cc:C) {
+                            if (similar(cc, c, tolerance)) {
+                                A.add(new Pair<Integer>(i, j));
+                                break;
+                            }
                         }
                     }
                 }
@@ -151,49 +156,12 @@ public class Main {
                 pane.clearPoints();
             }
 
-
-            for(Pair<Double> P: loc) {
-                //System.out.printf("%.2f\t%.2f\n",P.first,P.second);
-            }
-
-            System.out.println(loc.size());
-
-            // approximate the center
-            ArrayList<Pair> centers = new ArrayList<Pair>();
-            for(int i = 0; i < loc.size(); ++i) {
-                for(int j = i + 1; j < loc.size(); ++j) {
-                    for(int k = j + 1; k < loc.size(); ++ k) {
-                        if(!close(loc.get(i), loc.get(j), loc.get(k))) {
-                            centers.add(compute(loc.get(i), loc.get(j), loc.get(k)));
-                        }
-                    }
-                }
-            }
-
-            Pair<Double> center = new Pair<Double>(0.0, 0.0);
-            for(Pair<Double> P: centers) {
-                center.first += P.first;
-                center.second += P.second;
-                System.out.printf("%.2f\t%.2f\n",P.first,P.second);
-                //pane.addPoint(new Pair<Integer>((int)(P.first * preview.getWidth()/width), (int)(P.second * preview.getHeight() / height)));
-            }
-            center.first /= centers.size();
-            center.second /= centers.size();
-
-            //System.out.printf("(%f, %f)\n",center.first,center.second);
-
-            pane.addPoint(new Pair<Integer>((int)(center.first * preview.getWidth()/width), (int)(center.second * preview.getHeight() / height)));
-
-            pane.displayPoints();
-
-            // print the angles
             double i = 1;
             for(Pair<Double> P: loc) {
-                pw.printf("%f,%f\n", i/FPS,Math.PI/2 + Math.atan2(center.second - P.second, center.first - P.first));
+                pw.printf("%f,%f,%f\n", i/FPS, P.first, P.second);
                 i++;
             }
 
-            //System.out.println(center.first + "\t" + center.second);
             pw.close();
             System.out.println("Tracking Complete!");
         } catch(Exception ex) {
